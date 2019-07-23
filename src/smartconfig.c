@@ -90,8 +90,8 @@ void ICACHE_FLASH_ATTR on_smartconfig_status_change(sc_status status, void *pdat
 
 void ICACHE_FLASH_ATTR task_smartconfig(void *params)
 {
-    printf("start airkiss...\n");
-    airkiss_start(true);
+    //printf("start airkiss...\n");
+    //airkiss_start(true);
     //printf("start smartconfig...\n");
     //smartconfig_start(on_smartconfig_status_change, 1);
 

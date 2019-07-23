@@ -9,6 +9,8 @@
         "timer.h": "c",
         "smartconfig.h": "c",
         "net.h": "c",
-        "airkiss.h": "c"
+        "airkiss.h": "c",
+        "dns.h": "c",
+        "wifi.h": "c"
     }
 }
