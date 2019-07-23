@@ -74,6 +74,8 @@ net_conn_t net_dial_tcp(const char *ip_addr, uint16 port)
     {
         free(conn);
         conn = NULL;
+
+        printf("net_dial_tcp(%s) failed, error: %d\n", ip_addr, err);
     }
 
     return conn;
@@ -111,11 +113,11 @@ net_conn_t net_dial(const char *network, const char *address)
     ip_addr[port_ptr - address] = '\0';
     memcpy(ip_addr, address, port_ptr - address);
 
-    if (strcmp(network, "tcp"))
+    if (0 == strcmp(network, "tcp"))
     {
         return net_dial_tcp(ip_addr, atoi(++port_ptr));
     }
-    else if (strcmp(network, "udp"))
+    else if (0 == strcmp(network, "udp"))
     {
         return net_dial_udp(ip_addr, atoi(++port_ptr));
     }
