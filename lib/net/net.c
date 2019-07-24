@@ -12,7 +12,7 @@ typedef struct __internal_net_conn_t
 net_conn_t net_dial_udp(const char *ip_addr, uint16 port)
 {
     int err = SOCKET_OK;
-    _internal_net_conn_t *conn = (_internal_net_conn_t *)malloc(sizeof(_internal_net_conn_t));
+    _internal_net_conn_t *conn = (_internal_net_conn_t *)calloc(sizeof(_internal_net_conn_t));
 
     do
     {
@@ -46,7 +46,7 @@ net_conn_t net_dial_udp(const char *ip_addr, uint16 port)
 net_conn_t net_dial_tcp(const char *ip_addr, uint16 port)
 {
     int err = SOCKET_OK;
-    _internal_net_conn_t *conn = (_internal_net_conn_t *)malloc(sizeof(_internal_net_conn_t));
+    _internal_net_conn_t *conn = (_internal_net_conn_t *)calloc(sizeof(_internal_net_conn_t));
 
     do
     {
