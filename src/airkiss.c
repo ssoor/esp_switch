@@ -274,7 +274,7 @@ void ICACHE_FLASH_ATTR on_wifi_promiscuous_rx_with_ctx(_internal_timer_context *
 /*
  * 混杂模式下抓到的802.11网络帧及长度，平台相关
  */
-_internal_timer_context *_promiscuous_cb_ctx;
+_internal_timer_context *_promiscuous_cb_ctx = NULL;
 void ICACHE_FLASH_ATTR on_wifi_promiscuous_rx(uint8 *buf, uint16 len)
 {
     on_wifi_promiscuous_rx_with_ctx(_promiscuous_cb_ctx, buf, len);
@@ -291,6 +291,7 @@ bool airkiss_start(uint8 log)
     conf.memcpy = (airkiss_memcpy_fn)&memcpy,
     conf.memcmp = (airkiss_memcmp_fn)&memcmp,
     ctx = malloc(sizeof(_internal_timer_context));
+    memset(ctx, 0, sizeof(_internal_timer_context));
 
     do
     {

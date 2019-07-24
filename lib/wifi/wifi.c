@@ -17,7 +17,7 @@ typedef struct __internal_scan_ctx_t
     struct station_config conf;
 } _internal_scan_ctx_t;
 
-_internal_scan_ctx_t *_scan_ctx;
+_internal_scan_ctx_t *_scan_ctx = NULL;
 static void ICACHE_FLASH_ATTR on_station_scan(void *arg, STATUS status)
 {
     struct bss_info *bss_link = (struct bss_info *)arg;
@@ -50,13 +50,16 @@ bool ICACHE_FLASH_ATTR timer_wifi_connect_scan(void *params)
     switch (wifi_station_get_connect_status())
     {
     case STATION_GOT_IP:
-        return true;
+        //printf("wifi_connect_scan(STATION_GOT_IP)\n");
+        break;
     case STATION_CONNECTING:
-        return true;
+        printf("wifi_connect_scan(STATION_CONNECTING)\n");
+        break;
     default:
         wifi_station_disconnect();
         wifi_station_scan(&conf, on_station_scan);
         printf("wifi_station_scan(ssid = %s, show_hidder = %d)\n", conf.ssid, conf.show_hidden);
+        break;
     }
 
     return true;
@@ -67,6 +70,7 @@ void ICACHE_FLASH_ATTR wifi_connect(char *ssid, char *passwd, char *bssid)
     if (NULL == _scan_ctx)
     {
         _scan_ctx = malloc(sizeof(_internal_scan_ctx_t));
+        memset(_scan_ctx, 0, sizeof(_internal_scan_ctx_t));
     }
 
     strcpy(_scan_ctx->conf.ssid, ssid);
@@ -74,13 +78,18 @@ void ICACHE_FLASH_ATTR wifi_connect(char *ssid, char *passwd, char *bssid)
 
     if (NULL == bssid)
     {
+        printf("wifi_connect_scan(STARTING, t = 0x%08X)\n", _scan_ctx->t);
+
         if (NULL == _scan_ctx->t)
         {
-            _scan_ctx->t = timer_new(1000, timer_wifi_connect_scan, _scan_ctx);
+            timer_wifi_connect_scan(_scan_ctx);
+            _scan_ctx->t = timer_new(5000, timer_wifi_connect_scan, _scan_ctx);
         }
     }
     else
     {
+        printf("wifi_connect_scan(STOPPING, t = 0x%08X)\n", _scan_ctx->t);
+
         if (NULL != _scan_ctx->t)
         {
             timer_stop(_scan_ctx->t);
