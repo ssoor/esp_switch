@@ -23,7 +23,9 @@
  */
 
 #include "esp_common.h"
+
 #include "net.h"
+#include "gpio.h"
 #include "wifi.h"
 #include "timer.h"
 #include "smartconfig.h"
@@ -160,6 +162,17 @@ void on_wifi_event(System_Event_t *event)
     }
 }
 
+bool _gpio_switch;
+bool ICACHE_FLASH_ATTR timer_gpio_switch(void *ctx)
+{
+    _gpio_switch = !_gpio_switch;
+    GPIO_OUTPUT_SET(GPIO2, _gpio_switch)
+
+    printf("GPIO13_OUTPUT_SET(%d)\n", _gpio_switch);
+
+    return true;
+}
+
 /******************************************************************************
  * FunctionName : user_init
  * Description  : entry of user application, init user function here
@@ -179,6 +192,9 @@ void user_init(void)
     wifi_set_opmode(STATION_MODE);
     wifi_set_event_handler_cb(on_wifi_event);
 
+    GPIO_ENABLE(GPIO2);
+
+    timer_new(1000, timer_gpio_switch, NULL);
     wifi_connect(STATION_WIFI_SSID, STATION_WIFI_PASSWD, NULL);
 
     xTaskCreate(task_smartconfig, "smartconfig", 256, NULL, 2, NULL);
