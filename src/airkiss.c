@@ -290,7 +290,7 @@ bool airkiss_start(uint8 log)
     conf.memset = (airkiss_memset_fn)&memset,
     conf.memcpy = (airkiss_memcpy_fn)&memcpy,
     conf.memcmp = (airkiss_memcmp_fn)&memcmp,
-    ctx = calloc(sizeof(_internal_timer_context));
+    ctx = calloc(1, sizeof(_internal_timer_context));
 
     do
     {

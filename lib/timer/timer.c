@@ -24,7 +24,7 @@ void ICACHE_FLASH_ATTR _internal_on_timer(_internal_timer_t *ctx)
 
 _internal_timer_t *_internal_timer_new(uint32 millisecond, bool is_repeat, bool is_nanosecond, timer_callback_t *cb, void *ctx)
 {
-    _internal_timer_t *timer = (_internal_timer_t *)calloc(sizeof(_internal_timer_t));
+    _internal_timer_t *timer = (_internal_timer_t *)calloc(1, sizeof(_internal_timer_t));
 
     timer->is_close = false;
     timer->is_repeat = is_repeat;

@@ -69,7 +69,7 @@ void ICACHE_FLASH_ATTR wifi_connect(char *ssid, char *passwd, char *bssid)
 {
     if (NULL == _scan_ctx)
     {
-        _scan_ctx = calloc(sizeof(_internal_scan_ctx_t));
+        _scan_ctx = calloc(1, sizeof(_internal_scan_ctx_t));
     }
 
     strcpy(_scan_ctx->conf.ssid, ssid);

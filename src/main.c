@@ -24,13 +24,9 @@
 
 #include "esp_common.h"
 
-#include "net.h"
-#include "gpio.h"
 #include "wifi.h"
 #include "timer.h"
 #include "smartconfig.h"
-#include <lwip/dns.h>
-#include <lwip/sockets.h>
 
 #define STATION_WIFI_SSID "HYS_WiFi_1"
 #define STATION_WIFI_PASSWD "huoys.com"
@@ -85,32 +81,6 @@ uint32 user_rf_cal_sector_set(void)
     return rf_cal_sec;
 }
 
-void on_connect_baidu()
-{
-    int i, len;
-    char resp[101];
-    net_conn_t conn;
-
-    conn = net_dial_tcp("220.181.38.148", 80);
-    if (NULL == conn)
-    {
-        printf("net_dial(\"www.baidu.com\") failed\n");
-    }
-    else
-    {
-#define HTTP_GET_BAIDU "GET / HTTP/1.1\r\nost: www.baidu.com\r\nConnection: close\r\n\r\n"
-        len = net_write(conn, HTTP_GET_BAIDU, sizeof(HTTP_GET_BAIDU));
-        printf("net_write(HTTP_GET) len: %d\n", len);
-
-        len = net_read(conn, resp, 100);
-        resp[101] = '\0';
-        printf("net_read() len: %d resp: %s\n", len, resp);
-
-        net_close(conn);
-        printf("net_close()\n");
-    }
-}
-
 void on_wifi_event(System_Event_t *event)
 {
     switch (event->event_id)
@@ -132,18 +102,11 @@ void on_wifi_event(System_Event_t *event)
         break;
     case EVENT_STAMODE_GOT_IP:
     {
-        err_t err;
-        char resp[2];
-        ip_addr_t addr;
-        net_conn_t conn;
-
         printf("ip: " IPSTR ", mask: " IPSTR ", gw: " IPSTR,
                IP2STR(&event->event_info.got_ip.ip),
                IP2STR(&event->event_info.got_ip.mask),
                IP2STR(&event->event_info.got_ip.gw));
         printf("\n");
-
-        on_connect_baidu();
         break;
     }
     case EVENT_SOFTAPMODE_STACONNECTED:
@@ -162,17 +125,6 @@ void on_wifi_event(System_Event_t *event)
     }
 }
 
-bool _gpio_switch;
-bool ICACHE_FLASH_ATTR timer_gpio_switch(void *ctx)
-{
-    _gpio_switch = !_gpio_switch;
-    GPIO_OUTPUT_SET(GPIO2, _gpio_switch)
-
-    printf("GPIO13_OUTPUT_SET(%d)\n", _gpio_switch);
-
-    return true;
-}
-
 /******************************************************************************
  * FunctionName : user_init
  * Description  : entry of user application, init user function here
@@ -181,21 +133,13 @@ bool ICACHE_FLASH_ATTR timer_gpio_switch(void *ctx)
 *******************************************************************************/
 void user_init(void)
 {
-    ip_addr_t addr;
     printf("SDK version:%s\n", system_get_sdk_version());
 
-    dns_init();
-    addr.addr = inet_addr("223.5.5.5");
-    dns_setserver(0, &addr);
-    addr.addr = inet_addr("114.114.114.114");
-    dns_setserver(1, &addr);
     wifi_set_opmode(STATION_MODE);
     wifi_set_event_handler_cb(on_wifi_event);
 
-    GPIO_ENABLE(GPIO2);
-
-    timer_new(1000, timer_gpio_switch, NULL);
     wifi_connect(STATION_WIFI_SSID, STATION_WIFI_PASSWD, NULL);
 
-    xTaskCreate(task_smartconfig, "smartconfig", 256, NULL, 2, NULL);
+    control_init();
+    //xTaskCreate(task_smartconfig, "smartconfig", 256, NULL, 2, NULL);
 }
