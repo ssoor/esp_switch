@@ -8,6 +8,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -75,10 +78,32 @@ type conf struct {
 }
 
 func connIO(conn net.Conn) {
-	var conf conf
+	conf := viper.New()
 	buff := make([]byte, 1)
 
+	defer conn.Close()
+
+	conf.SetConfigFile("conf.json")
+	err := conf.ReadInConfig()
+	if err != nil {
+		fmt.Println("ReadInConfig failed, error:", err)
+		return
+	}
+
+	conf.WatchConfig()
+	conf.OnConfigChange(func(e fsnotify.Event) {
+		fmt.Println("Config file changed:", e.Name)
+
+		buff[0] = 1
+		if conf.GetBool("switch") {
+			buff[0] = 0
+		}
+		fmt.Println("change switch status to", buff[0])
+		conn.Write(buff[:1])
+	})
+
 	for {
+
 		if _, err := io.ReadFull(conn, buff[:1]); nil != err {
 			fmt.Println("ReadFull failed, error:", err)
 			return
@@ -96,10 +121,9 @@ func connIO(conn net.Conn) {
 		}
 
 		buff[0] = 1
-		if conf.Switch {
+		if conf.GetBool("switch") {
 			buff[0] = 0
 		}
-
 		fmt.Println("change switch status to", buff[0])
 		conn.Write(buff[:1])
 	}
