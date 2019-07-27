@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"> 
+<title>完蛋</title> 
+<style>
+.choose-btn { display: none; }
+.choose-label { box-shadow: #b1b1b1 0px 0px 0px 1px; width: 30px; height: 16px; display: inline-block; border-radius: 16px; position: relative; background-color: #bdbdbd; overflow: hidden; margin: 0; margin-top: 4px; cursor: pointer; vertical-align: middle; }
+.choose-label:before { content: ''; position: absolute; left: 0; width: 16px; height: 16px; display: inline-block; border-radius: 20px; background-color: #fff; z-index: 20; -webkit-transition: all 0.2s; transition: all 0.2s; }
+.choose-btn:checked + label.choose-label:before { left: 14px; }
+.choose-btn:checked + label.choose-label { background-color: #009cef; box-shadow: #009cef 0px 0px 0px 1px; }
+.choose-text { display: inline-block; vertical-align: middle; line-height: 20px; color: #888; font-size: 12px; margin-top: 4px; }
+</style>
+<script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+</head>
+<body>
+
+<h2>这是个电灯泡</h2>
+<p>试试能不能操作开关~~~~</p>
+
+<div>
+    <input type="checkbox" name="switch1" id="switch1" class="choose-btn" data-toggle="开启|关闭">
+    <label for="switch1" class="choose-label"></label>
+    <span class="choose-text"></span>
+</div>
+
+<script type="text/javascript">
+
+function setStatus(self, status) {
+  var _url = '/switch?switch=1';
+  if (status) {
+    _url = '/switch?switch=0';
+  }
+
+        $.ajax({
+            url: _url,
+            type: 'GET',
+            cache: false,
+            processData: false,
+            contentType: false
+        }).done(function (data) {
+            console.log(status,_url,',success,' + data);
+            self.checked = JSON.parse(data).switch;
+            var texts = $(self).attr('data-toggle').split('|');
+            $(self).siblings('.choose-text').text(self.checked?texts[0]:texts[1]);
+        }).fail(function (res) {
+            alert("修改失败！！！");
+            console.log('fail,' + res);
+        });
+}
+// 开关组件
+$(".choose-btn").each(function(){
+    let self = this;
+    var _url = '/switch';
+        $.ajax({
+            url: _url,
+            type: 'GET',
+            cache: false,
+            processData: false,
+            contentType: false
+        }).done(function (data) {
+            console.log('success,' + data);
+            self.checked = JSON.parse(data).switch;
+            var texts = $(self).attr('data-toggle').split('|');
+            $(self).siblings('.choose-text').text(self.checked?texts[0]:texts[1]);
+        }).fail(function (res) {
+            alert("获取开关状态失败！！！");
+            console.log('fail,' + res);
+        });
+});
+$("#switch1").on("change", function(){
+    setStatus(this, this.checked);
+});
+</script>
+</body>
+</html>
