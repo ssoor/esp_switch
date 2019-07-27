@@ -72,8 +72,17 @@ void ICACHE_FLASH_ATTR wifi_connect(char *ssid, char *passwd, char *bssid)
         _scan_ctx = calloc(1, sizeof(_internal_scan_ctx_t));
     }
 
+    _scan_ctx->conf.bssid_set = 0;
     strcpy(_scan_ctx->conf.ssid, ssid);
     strcpy(_scan_ctx->conf.password, passwd);
+
+    if (bssid) {
+        _scan_ctx->conf.bssid_set = 1;
+        memcpy(_scan_ctx->conf.bssid, bssid, sizeof(_scan_ctx->conf.bssid));
+
+    }
+
+    _internal_wifi_connect(&_scan_ctx->conf);
 
     if (NULL == bssid)
     {
@@ -93,12 +102,5 @@ void ICACHE_FLASH_ATTR wifi_connect(char *ssid, char *passwd, char *bssid)
         {
             timer_stop(_scan_ctx->t);
         }
-
-        _scan_ctx->conf.bssid_set = 1;
-        memcpy(_scan_ctx->conf.bssid, bssid, sizeof(_scan_ctx->conf.bssid));
-        _internal_wifi_connect(&_scan_ctx->conf);
-
-        free(_scan_ctx);
-        _scan_ctx = NULL;
     }
 }

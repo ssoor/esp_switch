@@ -8,14 +8,17 @@
 
 #define SWITCH_GPIO GPIO2
 
+#define CONTROL_SERVER_PORT 65530
+#define CONTROL_SERVER_ADDR "cn.coocn.cn"
+
 typedef struct
 {
     ushort port;
-    char *address;
+    char address[16];
     net_conn_t conn;
 } _internal_ctx;
 
-bool control_update_status(_internal_ctx *ctx)
+bool _control_update_status(_internal_ctx *ctx)
 {
     int len;
     uint8 switch_status;
@@ -25,7 +28,6 @@ bool control_update_status(_internal_ctx *ctx)
     {
         if (STATION_GOT_IP != wifi_station_get_connect_status())
         {
-            printf("wifi_station_get_connect_status() = %d\n", wifi_station_get_connect_status());
             return false;
         }
 
@@ -37,9 +39,9 @@ bool control_update_status(_internal_ctx *ctx)
         }
 
         //设置发送超时
-        setsockopt(ctx->conn, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(struct timeval));
+        // setsockopt(ctx->conn, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(struct timeval));
         //设置接收超时
-        setsockopt(ctx->conn, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(struct timeval));
+        // setsockopt(ctx->conn, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(struct timeval));
     }
 
     len = net_read(ctx->conn, &switch_status, sizeof(switch_status));
@@ -60,15 +62,11 @@ bool control_update_status(_internal_ctx *ctx)
 
 void ICACHE_FLASH_ATTR task_control_loop(void *param)
 {
-    int len, delay;
-    uint8 switch_status;
     _internal_ctx *ctx = (_internal_ctx *)param;
-
-    delay = 0;
 
     while (true)
     {
-        if (!control_update_status(ctx->conn))
+        if (!_control_update_status(ctx))
         {
             vTaskDelay(100 / portTICK_RATE_MS);
         }
@@ -77,21 +75,7 @@ void ICACHE_FLASH_ATTR task_control_loop(void *param)
     VTaskDelete(NULL);
 }
 
-_internal_ctx *_wakeup_ctx;
-void on_fpm_wakeup()
-{
-    wifi_fpm_close();
-
-    while (!control_update_status(_wakeup_ctx->conn))
-    {
-        vTaskDelay(100 / portTICK_RATE_MS);
-    }
-
-    wifi_fpm_open();
-    wifi_fpm_do_sleep(1 * 1000);
-}
-
-void ICACHE_FLASH_ATTR task_control_reconnect(void *param)
+void ICACHE_FLASH_ATTR task_control_heartbeat(void *param)
 {
     int len;
     uint8 package_update[] = {'U'};
@@ -115,34 +99,30 @@ void ICACHE_FLASH_ATTR task_control_reconnect(void *param)
     }
 }
 
-void control_init(bool loop)
+void ICACHE_FLASH_ATTR task_control_dns(const char *name, ip_addr_t *ipaddr, void *param) {
+    _internal_ctx *ctx = (_internal_ctx*)param;
+
+    ctx->port = CONTROL_SERVER_PORT;
+    inet_ntoa_r(ipaddr, ctx->address, sizeof(ctx->address));
+
+    printf("control_init(address = %s, port = %d)\n", ctx->address, ctx->port);
+    
+}
+
+void control_init()
 {
     ip_addr_t addr;
     _internal_ctx *ctx = calloc(1, sizeof(_internal_ctx));
 
+    dns_init();
+    addr.addr = inet_addr("223.5.5.5");
+    dns_setserver(0, &addr);
+    addr.addr = inet_addr("114.114.114.114");
+    dns_setserver(1, &addr);
+
     GPIO_ENABLE(SWITCH_GPIO);
 
-    wifi_set_sleep_type(LIGHT_SLEEP_T);
-    wifi_fpm_set_wakeup_cb(on_fpm_wakeup);
-
-    wifi_station_disconnect();
-    wifi_set_opmode(NULL_MODE); //	set	WiFi	mode	to	null	mode.
-    // dns_init();
-    // addr.addr = inet_addr("223.5.5.5");
-    // dns_setserver(0, &addr);
-    // addr.addr = inet_addr("114.114.114.114");
-    // dns_setserver(1, &addr);
-
-    ctx->port = 65530;
-    ctx->address = "172.12.0.185";
-
-    printf("control_init(address = %s, port = %d)\n", ctx->address, ctx->port);
-
-    wifi_fpm_open();
-    wifi_fpm_do_sleep(1 * 1000);
-    if (loop)
-    {
-        xTaskCreate(task_control_loop, "task_control_loop", 256, ctx, tskIDLE_PRIORITY, NULL);
-        xTaskCreate(task_control_reconnect, "task_control_reconnect", 256, ctx, tskIDLE_PRIORITY, NULL);
-    }
+    dns_gethostbyname(CONTROL_SERVER_ADDR, &addr, task_control_dns, ctx);
+    xTaskCreate(task_control_loop, "task_control_loop", 256, ctx, tskIDLE_PRIORITY, NULL);
+    xTaskCreate(task_control_heartbeat, "task_control_reconnect", 256, ctx, tskIDLE_PRIORITY, NULL);
 }

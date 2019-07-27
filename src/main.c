@@ -28,8 +28,10 @@
 #include "timer.h"
 #include "smartconfig.h"
 
-#define STATION_WIFI_SSID "HYS_WiFi_1"
-#define STATION_WIFI_PASSWD "huoys.com"
+// #define STATION_WIFI_SSID "HYS_WiFi_1"
+// #define STATION_WIFI_PASSWD "huoys.com"
+#define STATION_WIFI_SSID "Ziroom-1101"
+#define STATION_WIFI_PASSWD "4001001111"
 
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
@@ -142,4 +144,7 @@ void user_init(void)
 
     control_init();
     //xTaskCreate(task_smartconfig, "smartconfig", 256, NULL, 2, NULL);
+
+    wifi_set_sleep_type(LIGHT_SLEEP_T);
+    wifi_fpm_open();
 }
