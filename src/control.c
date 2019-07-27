@@ -10,6 +10,7 @@
 
 #define CONTROL_SERVER_PORT 65530
 #define CONTROL_SERVER_ADDR "cn.coocn.cn"
+#define CONTROL_READ_TIMEOUT 3000
 
 typedef struct
 {
@@ -22,7 +23,6 @@ bool _control_update_status(_internal_ctx *ctx)
 {
     int len;
     uint8 switch_status;
-    struct timeval timeout = {3, 0};
 
     if (NULL == ctx->conn)
     {
@@ -37,14 +37,9 @@ bool _control_update_status(_internal_ctx *ctx)
             printf("net_dial(%s:%u) failed, error: %d\n", ctx->address, ctx->port, errno);
             return false;
         }
-
-        //设置发送超时
-        // setsockopt(ctx->conn, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(struct timeval));
-        //设置接收超时
-        // setsockopt(ctx->conn, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(struct timeval));
     }
 
-    len = net_read(ctx->conn, &switch_status, sizeof(switch_status));
+    len = net_read_with_timeout(ctx->conn, CONTROL_READ_TIMEOUT, &switch_status, sizeof(switch_status));
     if (sizeof(switch_status) != len)
     {
         printf("control will reconnect, read is failed, length: %d, error: %d\n", len, errno);

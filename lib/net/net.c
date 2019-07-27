@@ -137,9 +137,24 @@ net_conn_t net_dial(const char *network, const char *address)
     return NULL;
 }
 
-int net_write(net_conn_t conn, const void *data, uint32 lenght)
+int net_write(net_conn_t conn,const void *data, uint32 lenght)
 {
+    return net_write_with_timeout(conn, INFINE, data, lenght);
+}
+
+int net_write_with_timeout(net_conn_t conn, ulong usec, const void *data, uint32 lenght)
+{
+    struct timeval timeout;
     _internal_net_conn_t *_conn = conn;
+
+    timeout.tv_sec = usec/1000;
+    timeout.tv_usec = usec%1000;
+
+    if(INFINE != usec) {
+        //设置发送超时
+        setsockopt(conn, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(struct timeval));
+    }
+
     if (_conn->is_udp)
     {
         return sendto(_conn->fd, data, lenght, 0, (struct sockaddr *)&_conn->addr, sizeof(_conn->addr));
@@ -148,9 +163,23 @@ int net_write(net_conn_t conn, const void *data, uint32 lenght)
     return send(_conn->fd, data, lenght, 0);
 }
 
-int net_read(net_conn_t conn, void *data, uint32 lenght)
+
+int net_read(net_conn_t conn, void *data, uint32 lenght){
+    return net_read_with_timeout(conn, INFINE, data, lenght);
+}
+
+int net_read_with_timeout(net_conn_t conn, ulong usec, void *data, uint32 lenght)
 {
+    struct timeval timeout;
     _internal_net_conn_t *_conn = conn;
+
+    timeout.tv_sec = usec/1000;
+    timeout.tv_usec = usec%1000;
+
+    if(INFINE != usec) {
+        //设置接收超时
+        setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(struct timeval));
+    }
 
     if (_conn->is_udp)
     {

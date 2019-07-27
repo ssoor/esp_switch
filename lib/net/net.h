@@ -7,6 +7,8 @@
 #define SOCKET_ERROR -1
 #define SOCKET_ADDRESS_INCORRECT -2
 
+#define INFINE  -1
+
 typedef void *net_conn_t;
 
 net_conn_t net_dial_udp(const char *ip_addr, uint16 port);
@@ -17,5 +19,8 @@ void net_close(net_conn_t conn);
 
 int net_read(net_conn_t conn, void *data, uint32 lenght);
 int net_write(net_conn_t conn, const void *data, uint32 lenght);
+
+int net_read_with_timeout(net_conn_t conn, ulong usec, void *data, uint32 lenght);
+int net_write_with_timeout(net_conn_t conn, ulong usec, const void *data, uint32 lenght);
 
 #endif
