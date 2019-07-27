@@ -1,16 +1,12 @@
+#include "config.h"
 #include "esp_common.h"
 
 #include "net.h"
 #include "gpio.h"
 #include "timer.h"
 #include <lwip/dns.h>
+#include <lwip/sys.h>
 #include <lwip/sockets.h>
-
-#define SWITCH_GPIO GPIO2
-
-#define CONTROL_SERVER_PORT 65530
-#define CONTROL_SERVER_ADDR "cn.coocn.cn"
-#define CONTROL_READ_TIMEOUT 3000
 
 typedef struct
 {
@@ -37,11 +33,17 @@ bool _control_update_status(_internal_ctx *ctx)
             printf("net_dial(%s:%u) failed, error: %d\n", ctx->address, ctx->port, errno);
             return false;
         }
+        
+        printf("control connection succeeded, address = %s:%d\n", ctx->address, ctx->port);
     }
 
     len = net_read_with_timeout(ctx->conn, CONTROL_READ_TIMEOUT, &switch_status, sizeof(switch_status));
     if (sizeof(switch_status) != len)
     {
+        if (ERR_TIMEOUT == errno) {
+            return true;
+        }
+        
         printf("control will reconnect, read is failed, length: %d, error: %d\n", len, errno);
         net_close(ctx->conn);
         ctx->conn = NULL;
@@ -85,22 +87,21 @@ void ICACHE_FLASH_ATTR task_control_heartbeat(void *param)
             continue;
         }
 
-        printf("control send update, conn: 0x%08X\n", ctx->conn);
         len = net_write(ctx->conn, &package_update, sizeof(package_update));
         if (sizeof(package_update) == len)
         {
             continue;
         }
+        printf("control send update failed, error: 0x%d\n", errno);
     }
 }
 
-void ICACHE_FLASH_ATTR task_control_dns(const char *name, ip_addr_t *ipaddr, void *param) {
+void ICACHE_FLASH_ATTR on_control_gethostbyaddr(const char *name, ip_addr_t *ipaddr, void *param) {
     _internal_ctx *ctx = (_internal_ctx*)param;
 
-    ctx->port = CONTROL_SERVER_PORT;
-    inet_ntoa_r(ipaddr, ctx->address, sizeof(ctx->address));
+    //inet_ntoa_r(ipaddr, ctx->address, sizeof(ctx->address)); // DNS 解析出来的 IP 不对
 
-    printf("control_init(address = %s, port = %d)\n", ctx->address, ctx->port);
+    printf("on_control_gethostbyaddr(hostname = %s, address = %s, port = %d)\n", name, ctx->address, ctx->port);
     
 }
 
@@ -110,14 +111,12 @@ void control_init()
     _internal_ctx *ctx = calloc(1, sizeof(_internal_ctx));
 
     dns_init();
-    addr.addr = inet_addr("223.5.5.5");
-    dns_setserver(0, &addr);
-    addr.addr = inet_addr("114.114.114.114");
-    dns_setserver(1, &addr);
-
     GPIO_ENABLE(SWITCH_GPIO);
 
-    dns_gethostbyname(CONTROL_SERVER_ADDR, &addr, task_control_dns, ctx);
+    ctx->port = CONTROL_SERVER_PORT;
+    strcpy(ctx->address, CONTROL_SERVER_ADDR);
+    dns_gethostbyname(CONTROL_SERVER_ADDR, &addr, on_control_gethostbyaddr, ctx);
+
     xTaskCreate(task_control_loop, "task_control_loop", 256, ctx, tskIDLE_PRIORITY, NULL);
     xTaskCreate(task_control_heartbeat, "task_control_reconnect", 256, ctx, tskIDLE_PRIORITY, NULL);
 }

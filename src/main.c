@@ -22,16 +22,13 @@
  *
  */
 
+
+#include "config.h"
 #include "esp_common.h"
 
 #include "wifi.h"
 #include "timer.h"
 #include "smartconfig.h"
-
-// #define STATION_WIFI_SSID "HYS_WiFi_1"
-// #define STATION_WIFI_PASSWD "huoys.com"
-#define STATION_WIFI_SSID "Ziroom-1101"
-#define STATION_WIFI_PASSWD "4001001111"
 
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
