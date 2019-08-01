@@ -7,6 +7,7 @@
 #include <lwip/dns.h>
 #include <lwip/sys.h>
 #include <lwip/sockets.h>
+#include <esp8266/ets_sys.h>
 
 typedef struct
 {
@@ -33,17 +34,18 @@ bool _control_update_status(_internal_ctx *ctx)
             printf("net_dial(%s:%u) failed, error: %d\n", ctx->address, ctx->port, errno);
             return false;
         }
-        
+
         printf("control connection succeeded, address = %s:%d\n", ctx->address, ctx->port);
     }
 
     len = net_read_with_timeout(ctx->conn, CONTROL_READ_TIMEOUT, &switch_status, sizeof(switch_status));
     if (sizeof(switch_status) != len)
     {
-        if (ERR_TIMEOUT == errno) {
+        if (ERR_TIMEOUT == errno)
+        {
             return true;
         }
-        
+
         printf("control will reconnect, read is failed, length: %d, error: %d\n", len, errno);
         net_close(ctx->conn);
         ctx->conn = NULL;
@@ -51,7 +53,7 @@ bool _control_update_status(_internal_ctx *ctx)
         return false;
     }
 
-    GPIO_OUTPUT_SET(SWITCH_GPIO, switch_status)
+    GPIO_OUTPUT_SET(GPIO_LIGHT, switch_status);
     printf("control switch status to %d\n", switch_status);
 
     return true;
@@ -96,13 +98,31 @@ void ICACHE_FLASH_ATTR task_control_heartbeat(void *param)
     }
 }
 
-void ICACHE_FLASH_ATTR on_control_gethostbyaddr(const char *name, ip_addr_t *ipaddr, void *param) {
-    _internal_ctx *ctx = (_internal_ctx*)param;
+void ICACHE_FLASH_ATTR on_control_gethostbyaddr(const char *name, ip_addr_t *ipaddr, void *param)
+{
+    _internal_ctx *ctx = (_internal_ctx *)param;
 
     //inet_ntoa_r(ipaddr, ctx->address, sizeof(ctx->address)); // DNS 解析出来的 IP 不对
 
     printf("on_control_gethostbyaddr(hostname = %s, address = %s, port = %d)\n", name, ctx->address, ctx->port);
-    
+}
+
+void IRAM_ATTR on_switch_local_intr(void *param)
+{
+    uint32 status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+
+    ETS_INTR_LOCK();
+
+    if (status & BIT(GPIO_LIGHT_SWITCH))
+    {
+        GPIO_OUTPUT_SET(GPIO_LIGHT, !GPIO_INPUT_GET(GPIO_LIGHT));
+        printf("control switch status to %d\n", GPIO_INPUT_GET(GPIO_LIGHT));
+    }
+
+    os_delay_us(10000);
+    GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, status);
+
+    ETS_INTR_UNLOCK();
 }
 
 void control_init()
@@ -111,7 +131,19 @@ void control_init()
     _internal_ctx *ctx = calloc(1, sizeof(_internal_ctx));
 
     dns_init();
-    GPIO_ENABLE(SWITCH_GPIO);
+    GPIO_ENABLE(GPIO_LIGHT, true);
+    GPIO_ENABLE(GPIO_LIGHT_SWITCH, false);
+
+    ETS_INTR_LOCK();
+
+    GPIO_INTR_ATTACH(on_switch_local_intr, NULL);
+    GPIO_INTR_STATE_SET(GPIO_ID_PIN(GPIO_LIGHT_SWITCH), GPIO_PIN_INTR_ANYEDGE);
+
+    GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(GPIO_LIGHT_SWITCH));
+
+    ETS_INTR_UNLOCK();
+
+    _xt_isr_unmask(1 << ETS_GPIO_INUM); // 使能GPIO中断
 
     ctx->port = CONTROL_SERVER_PORT;
     strcpy(ctx->address, CONTROL_SERVER_ADDR);

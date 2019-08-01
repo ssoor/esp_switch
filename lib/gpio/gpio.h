@@ -39,15 +39,40 @@
 
 #define GPIO_FUNC(no) FUNC_GPIO##no
 #define GPIO_PIN_REG(no) GPIO_PIN_REG_##no
+#define GPIO_PIN_ADDR(i) (GPIO_PIN0_ADDRESS + i * 4)
 
-#define GPIO_ENABLE(no) \
-    PIN_FUNC_SELECT(GPIO_PIN_REG(no), GPIO_FUNC(no))
+#define GPIO_ENABLE(no, output)                       \
+    PIN_FUNC_SELECT(GPIO_PIN_REG(no), GPIO_FUNC(no)); \
+    GPIO_REG_WRITE(((output) ? GPIO_ENABLE_W1TS_ADDRESS : GPIO_ENABLE_W1TC_ADDRESS), BIT(no))
 
-#define GPIO_OUTPUT_SET(no, value)                                                            \
-    GPIO_REG_WRITE(((value & 0x1) ? GPIO_OUT_W1TS_ADDRESS : GPIO_OUT_W1TC_ADDRESS), BIT(no)); \
-    GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, BIT(no));
+/**  
+  * @brief   Sample the level of GPIO input.
+  * 
+  * @param   gpio_no : The GPIO sequence number.
+  *  
+  * @return  the level of GPIO input 
+  */
+#define GPIO_INPUT_GET(gpio_no) ((gpio_input_get() >> gpio_no) & BIT(0))
 
-#define GPIO_OUTPUT_GET(no, value) \
-    GPIO_REG_READ(GPIO_IN_ADDRESS);
+#define GPIO_OUTPUT_SET(no, value) \
+    GPIO_REG_WRITE(((value) ? GPIO_OUT_W1TS_ADDRESS : GPIO_OUT_W1TC_ADDRESS), BIT(no))
+
+#define GPIO_INTR_ATTACH(func, args) \
+    _xt_isr_attach(ETS_GPIO_INUM, func, args);
+
+#define GPIO_INTR_STATE_SET(no, type)                                                                                                                              \
+    portENTER_CRITICAL();                                                                                                                                          \
+    GPIO_REG_WRITE(GPIO_PIN_ADDR(GPIO_ID_PIN(no)), (GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(no))) & (~GPIO_PIN_INT_TYPE_MASK)) | (type << GPIO_PIN_INT_TYPE_LSB)); \
+    portEXIT_CRITICAL()
+
+typedef enum
+{
+    GPIO_PIN_INTR_DISABLE = 0, /**< disable GPIO interrupt */
+    GPIO_PIN_INTR_POSEDGE = 1, /**< GPIO interrupt type : rising edge */
+    GPIO_PIN_INTR_NEGEDGE = 2, /**< GPIO interrupt type : falling edge */
+    GPIO_PIN_INTR_ANYEDGE = 3, /**< GPIO interrupt type : bothe rising and falling edge */
+    GPIO_PIN_INTR_LOLEVEL = 4, /**< GPIO interrupt type : low level */
+    GPIO_PIN_INTR_HILEVEL = 5  /**< GPIO interrupt type : high level */
+} GPIO_INT_TYPE;
 
 #endif

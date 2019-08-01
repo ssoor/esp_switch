@@ -22,7 +22,6 @@
  *
  */
 
-
 #include "config.h"
 #include "esp_common.h"
 
