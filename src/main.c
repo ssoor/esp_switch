@@ -142,5 +142,4 @@ void user_init(void)
     //xTaskCreate(task_smartconfig, "smartconfig", 256, NULL, 2, NULL);
 
     wifi_set_sleep_type(LIGHT_SLEEP_T);
-    wifi_fpm_open();
 }
