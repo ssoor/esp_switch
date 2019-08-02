@@ -134,6 +134,8 @@ void control_init()
     GPIO_ENABLE(GPIO_LIGHT, true);
     GPIO_ENABLE(GPIO_LIGHT_SWITCH, false);
 
+    GPIO_PULLUP_ENABLE(GPIO_LIGHT_SWITCH);
+
     ETS_INTR_LOCK();
 
     GPIO_INTR_ATTACH(on_switch_local_intr, NULL);

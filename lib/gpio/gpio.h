@@ -45,6 +45,12 @@
     PIN_FUNC_SELECT(GPIO_PIN_REG(no), GPIO_FUNC(no)); \
     GPIO_REG_WRITE(((output) ? GPIO_ENABLE_W1TS_ADDRESS : GPIO_ENABLE_W1TC_ADDRESS), BIT(no))
 
+#define GPIO_PULLUP_ENABLE(no) \ 
+    WRITE_PERI_REG((GPIO_PIN_REG(no)), (READ_PERI_REG(GPIO_PIN_REG(no)) & (~(PERIPHS_IO_MUX_PULLUP))))
+
+#define GPIO_PULLUP_DISABLE(no) \ 
+    WRITE_PERI_REG((GPIO_PIN_REG(no)), (READ_PERI_REG(GPIO_PIN_REG(no)) | PERIPHS_IO_MUX_PULLUP))
+
 /**  
   * @brief   Sample the level of GPIO input.
   * 
